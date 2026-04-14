@@ -1,0 +1,17 @@
+# Core data
+numpy
+pandas
+
+# Machine learning
+scikit-learn
+
+# Visualisation
+matplotlib
+seaborn
+
+# Config
+pyyaml
+
+# Notebooks
+jupyterlab
+ipykernel
