@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from scipy.spatial.distance import cdist
 from sklearn.cluster import KMeans, AgglomerativeClustering
 from sklearn.mixture import GaussianMixture
 from sklearn.preprocessing import StandardScaler
@@ -15,7 +16,8 @@ class Modeling:
     - Accept a numeric ``pd.DataFrame`` (samples × elements).
     - Scale features internally via ``StandardScaler`` (zero-variance
       columns are dropped so Cu ≈ 99.9 % does not dominate).
-    - Return a result ``dict`` with at minimum ``labels`` and ``silhouette``.
+    - Return a result ``dict`` with at minimum ``labels``, ``silhouette``,
+      ``scaler``, and ``cols`` (so new samples can be projected later).
     """
 
     # ------------------------------------------------------------------
@@ -23,11 +25,13 @@ class Modeling:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _scale(df: pd.DataFrame) -> np.ndarray:
-        """Drop zero-variance columns then StandardScale."""
+    def _scale(df: pd.DataFrame) -> tuple[np.ndarray, StandardScaler, list[str]]:
+        """Drop zero-variance columns, StandardScale, return (X, scaler, cols)."""
         numeric = df.select_dtypes(include="number")
         non_const = numeric.loc[:, numeric.std() > 0]
-        return StandardScaler().fit_transform(non_const.values)
+        scaler = StandardScaler()
+        X = scaler.fit_transform(non_const.values)
+        return X, scaler, list(non_const.columns)
 
     # ------------------------------------------------------------------
     # Individual algorithms
@@ -40,7 +44,7 @@ class Modeling:
         seed: int = 42,
     ) -> dict:
         """Vanilla K-Means (``init='random'``, 10 re-starts)."""
-        X = Modeling._scale(df)
+        X, scaler, cols = Modeling._scale(df)
         model = KMeans(n_clusters=k, init="random", n_init=10,
                        random_state=seed)
         labels = model.fit_predict(X)
@@ -49,6 +53,8 @@ class Modeling:
             "model": model,
             "silhouette": silhouette_score(X, labels),
             "inertia": model.inertia_,
+            "scaler": scaler,
+            "cols": cols,
         }
 
     @staticmethod
@@ -58,7 +64,7 @@ class Modeling:
         seed: int = 42,
     ) -> dict:
         """K-Means++ (``init='k-means++'``, 10 re-starts)."""
-        X = Modeling._scale(df)
+        X, scaler, cols = Modeling._scale(df)
         model = KMeans(n_clusters=k, init="k-means++", n_init=10,
                        random_state=seed)
         labels = model.fit_predict(X)
@@ -67,6 +73,8 @@ class Modeling:
             "model": model,
             "silhouette": silhouette_score(X, labels),
             "inertia": model.inertia_,
+            "scaler": scaler,
+            "cols": cols,
         }
 
     @staticmethod
@@ -76,13 +84,17 @@ class Modeling:
         linkage: str = "ward",
     ) -> dict:
         """Agglomerative Hierarchical Clustering (default linkage: ward)."""
-        X = Modeling._scale(df)
+        X, scaler, cols = Modeling._scale(df)
         model = AgglomerativeClustering(n_clusters=k, linkage=linkage)
         labels = model.fit_predict(X)
+        centroids = np.array([X[labels == i].mean(axis=0) for i in range(k)])
         return {
             "labels": labels,
             "model": model,
             "silhouette": silhouette_score(X, labels),
+            "scaler": scaler,
+            "cols": cols,
+            "centroids": centroids,
         }
 
     @staticmethod
@@ -92,7 +104,7 @@ class Modeling:
         seed: int = 42,
     ) -> dict:
         """Gaussian Mixture Model — distribution-based clustering."""
-        X = Modeling._scale(df)
+        X, scaler, cols = Modeling._scale(df)
         model = GaussianMixture(n_components=k, random_state=seed)
         model.fit(X)
         labels = model.predict(X)
@@ -102,6 +114,8 @@ class Modeling:
             "silhouette": silhouette_score(X, labels),
             "bic": model.bic(X),
             "aic": model.aic(X),
+            "scaler": scaler,
+            "cols": cols,
         }
 
     # ------------------------------------------------------------------
@@ -133,7 +147,8 @@ class Modeling:
             variants), and BIC/AIC (GMM).  Index is (Algorithm, K).
         results : dict[str, dict[int, dict]]
             Full objects: ``results[algo_name][k]`` → result dict
-            containing ``labels``, ``model``, ``silhouette``, etc.
+            containing ``labels``, ``model``, ``silhouette``,
+            ``scaler``, ``cols``, etc.
         """
         runners: dict[str, callable] = {
             "KMeans": lambda k: Modeling.run_kmeans(df, k, seed=seed),
@@ -163,3 +178,42 @@ class Modeling:
 
         summary = pd.DataFrame(rows).set_index(["Algorithm", "K"]).sort_index()
         return summary, results
+
+    # ------------------------------------------------------------------
+    # Predict new samples
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def predict_new(
+        df_new: pd.DataFrame,
+        results: dict,
+        k: int,
+    ) -> pd.DataFrame:
+        """Predict cluster labels for new samples using all fitted algorithms.
+
+        Parameters
+        ----------
+        df_new:
+            New samples feature matrix (same columns as training data).
+        results:
+            The ``results`` dict returned by ``run_all``.
+        k:
+            Which cluster count to use for prediction.
+
+        Returns
+        -------
+        pd.DataFrame
+            One column per algorithm, one row per new sample, with
+            the predicted cluster label (0-indexed integer).
+        """
+        preds = {}
+        for algo, algo_results in results.items():
+            res = algo_results[k]
+            X_new = res["scaler"].transform(df_new[res["cols"]].values)
+            model = res["model"]
+            if hasattr(model, "predict"):
+                preds[algo] = model.predict(X_new)
+            else:
+                # AgglomerativeClustering has no predict — nearest centroid
+                preds[algo] = cdist(X_new, res["centroids"]).argmin(axis=1)
+        return pd.DataFrame(preds, index=df_new.index)
