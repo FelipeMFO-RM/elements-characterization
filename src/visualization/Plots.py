@@ -26,9 +26,16 @@ class Plots:
         title: str,
         ks: tuple,
         seed: int = 42,
+        output_path: str | None = None,
     ) -> None:
-        """PCA 2-D scatter: rows = K values, columns = algorithms."""
+        """PCA 2-D scatter: rows = K values, columns = algorithms.
 
+        Parameters
+        ----------
+        output_path:
+            If provided, save the figure to this path instead of (or in
+            addition to) displaying it.  Useful for the pipeline script.
+        """
         numeric = df_feat.select_dtypes(include="number")
         non_const = numeric.loc[:, numeric.std() > 0]
         X_scaled = StandardScaler().fit_transform(non_const.values)
@@ -61,6 +68,8 @@ class Plots:
                 ax.legend(fontsize=7, markerscale=1.2)
 
         plt.tight_layout()
+        if output_path:
+            plt.savefig(output_path, dpi=150, bbox_inches="tight")
         plt.show()
 
     @staticmethod
@@ -68,9 +77,16 @@ class Plots:
         summaries: list[tuple[pd.DataFrame, str]],
         ks: tuple,
         title: str = "Silhouette score — all algorithms & datasets",
+        output_path: str | None = None,
     ) -> None:
         """Grouped bar chart comparing silhouette scores across datasets,
-        one subplot per K."""
+        one subplot per K.
+
+        Parameters
+        ----------
+        output_path:
+            If provided, save the figure to this path.
+        """
         comp_flat = pd.concat([
             summary[["Silhouette"]].assign(Dataset=label)
             for summary, label in summaries
@@ -89,6 +105,8 @@ class Plots:
             ax.tick_params(axis="x", rotation=30)
 
         plt.tight_layout()
+        if output_path:
+            plt.savefig(output_path, dpi=150, bbox_inches="tight")
         plt.show()
 
     @staticmethod
@@ -101,6 +119,7 @@ class Plots:
         ks: tuple,
         title: str,
         seed: int = 42,
+        output_path: str | None = None,
     ) -> None:
         """PCA scatter overlaying new sample predictions on fitted
         training clusters.
@@ -127,6 +146,8 @@ class Plots:
             Figure super-title.
         seed:
             PCA random state.
+        output_path:
+            If provided, save the figure to this path.
         """
         ref = results[algos[0]][ks[0]]
         scaler, cols = ref["scaler"], ref["cols"]
@@ -181,11 +202,23 @@ class Plots:
                 ax.legend(fontsize=7, markerscale=0.8, title="new → cluster")
 
         plt.tight_layout()
+        if output_path:
+            plt.savefig(output_path, dpi=150, bbox_inches="tight")
         plt.show()
 
     @staticmethod
-    def plot_silhouette_heatmap(summary: pd.DataFrame, title: str) -> None:
-        """Heatmap of silhouette scores: algorithms vs K."""
+    def plot_silhouette_heatmap(
+        summary: pd.DataFrame,
+        title: str,
+        output_path: str | None = None,
+    ) -> None:
+        """Heatmap of silhouette scores: algorithms vs K.
+
+        Parameters
+        ----------
+        output_path:
+            If provided, save the figure to this path.
+        """
         sil = summary["Silhouette"].unstack(level="K")
         fig, ax = plt.subplots(figsize=(6, 3))
         sns.heatmap(
@@ -200,4 +233,6 @@ class Plots:
         )
         ax.set_title(title, fontweight="bold")
         plt.tight_layout()
+        if output_path:
+            plt.savefig(output_path, dpi=150, bbox_inches="tight")
         plt.show()

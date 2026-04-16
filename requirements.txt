@@ -1,6 +1,7 @@
 # Core data
 numpy
 pandas
+scipy
 
 # Machine learning
 scikit-learn

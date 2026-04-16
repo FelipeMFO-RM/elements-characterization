@@ -280,10 +280,24 @@ jupyter lab
 elements-characterization/
 ├── config/
 │   └── elements_considerations.py   # Tier lists and DISCARD definition
+├── config.yaml                      # Pipeline hyperparameters and new samples
+├── run_pipeline.py                  # Script entry point (see below)
 ├── data/
-│   └── raw/
-│       └── elements_composition/
-│           └── compositions.py      # All 9 OES measurements
+│   ├── raw/
+│   │   └── elements_composition/
+│   │       └── compositions.py      # All 9 OES measurements
+│   └── outputs/                     # Auto-created by run_pipeline.py
+│       └── <run_name>_<timestamp>/
+│           ├── silhouette_summary.csv
+│           ├── dataset_A_silhouette_heatmap.png
+│           ├── dataset_A_pca_clusters.png
+│           ├── dataset_B_silhouette_heatmap.png
+│           ├── dataset_B_pca_clusters.png
+│           ├── dataset_C_silhouette_heatmap.png
+│           ├── dataset_C_pca_clusters.png
+│           ├── comparison_silhouette_bars.png
+│           ├── new_samples_predictions.csv
+│           └── new_samples_pca.png
 ├── notebooks/
 │   ├── exploration/
 │   │   └── eda_clusterization.ipynb # EDA and initial visualisation
@@ -299,6 +313,95 @@ elements-characterization/
 │       └── Plots.py                 # All plotting methods
 └── requirements.txt
 ```
+
+---
+
+## Running the Pipeline Script
+
+The pipeline script (`run_pipeline.py`) replicates the full notebook workflow
+in a single headless run — no Jupyter required. All outputs are saved to
+`data/outputs/`.
+
+### Step-by-step
+
+**Step 1 — Set up the environment** (if you haven't already)
+
+```bash
+python -m venv .venv
+source .venv/bin/activate        # macOS / Linux
+.venv\Scripts\activate           # Windows
+pip install -r requirements.txt
+```
+
+**Step 2 — Edit `config.yaml`**
+
+Open `config.yaml` at the project root and adjust the parameters you want to
+change. The key sections are:
+
+```yaml
+run_name: "my_experiment"   # output folder prefix
+
+seed: 42
+ks: [2, 3, 4]
+n_mc: 100
+
+tiers: null                 # null → all; ["tier1"]; ["tier1","tier2"]; etc.
+drop_discarded: false       # true → remove near-zero-variance elements
+
+classification:
+  reference_dataset: "C"
+  reference_k: 4
+  blends:
+    enabled: true
+    n: 8
+  manual_samples:
+    - name: "my_new_sample"
+      elements:
+        Pb: 0.0332
+        Sn: 0.0060
+        Fe: 0.0013
+```
+
+To classify a real new OES measurement, add it under `manual_samples` and
+list only the elements that differ from zero.
+
+**Step 3 — Run the script**
+
+```bash
+# Default: uses config.yaml in the project root
+python run_pipeline.py
+
+# Custom config file
+python run_pipeline.py --config path/to/other_config.yaml
+```
+
+**Step 4 — Inspect the outputs**
+
+Outputs are written to `data/outputs/<run_name>_<YYYYMMDD_HHMMSS>/`.
+
+| File | Contents |
+|---|---|
+| `silhouette_summary.csv` | Silhouette / Inertia / BIC / AIC for every (dataset, algorithm, K) |
+| `dataset_*_silhouette_heatmap.png` | Heatmap of silhouette scores per dataset |
+| `dataset_*_pca_clusters.png` | PCA scatter coloured by cluster per dataset |
+| `comparison_silhouette_bars.png` | Grouped bar chart comparing all three datasets |
+| `new_samples_predictions.csv` | Predicted cluster label per algorithm for every new sample |
+| `new_samples_pca.png` | PCA overlay — new samples (★) on top of fitted clusters |
+
+**Tip — running multiple experiments back to back:**
+
+```bash
+# Tier 1 only
+python run_pipeline.py --config config_tier1.yaml
+
+# All tiers, discarded elements removed
+python run_pipeline.py --config config_all_tiers.yaml
+```
+
+Each run gets its own timestamped output folder, so results never overwrite
+each other.
+
+---
 
 ### TODO — Setup script (next steps)
 
