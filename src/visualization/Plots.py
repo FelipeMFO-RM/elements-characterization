@@ -69,18 +69,21 @@ class Plots:
         ks: tuple,
         title: str = "Silhouette score — all algorithms & datasets",
     ) -> None:
-        """Grouped bar chart comparing silhouette scores across datasets, one subplot per K."""
+        """Grouped bar chart comparing silhouette scores across datasets,
+        one subplot per K."""
         comp_flat = pd.concat([
             summary[["Silhouette"]].assign(Dataset=label)
             for summary, label in summaries
         ]).reset_index()
 
-        fig, axes = plt.subplots(1, len(ks), figsize=(5 * len(ks), 4), sharey=True)
+        fig, axes = plt.subplots(1, len(ks), figsize=(5 * len(ks), 4),
+                                 sharey=True)
         fig.suptitle(title, fontweight="bold")
 
         for ax, k in zip(axes, ks):
             subset = comp_flat[comp_flat["K"] == k]
-            sns.barplot(data=subset, x="Algorithm", y="Silhouette", hue="Dataset", ax=ax)
+            sns.barplot(data=subset, x="Algorithm", y="Silhouette",
+                        hue="Dataset", ax=ax)
             ax.set_title(f"K = {k}")
             ax.set_ylim(0, 1)
             ax.tick_params(axis="x", rotation=30)
@@ -99,7 +102,8 @@ class Plots:
         title: str,
         seed: int = 42,
     ) -> None:
-        """PCA scatter overlaying new sample predictions on fitted training clusters.
+        """PCA scatter overlaying new sample predictions on fitted
+        training clusters.
 
         Training points are shown faded; new samples appear as stars coloured
         by their predicted cluster.
@@ -128,11 +132,13 @@ class Plots:
         scaler, cols = ref["scaler"], ref["cols"]
 
         pca = PCA(n_components=2, random_state=seed)
-        coords_train = pca.fit_transform(scaler.transform(df_train[cols].values))
+        coords_train = \
+            pca.fit_transform(scaler.transform(df_train[cols].values))
         coords_new = pca.transform(scaler.transform(df_new[cols].values))
 
         n_rows, n_cols = len(ks), len(algos)
-        fig, axes = plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 4 * n_rows))
+        fig, axes = \
+            plt.subplots(n_rows, n_cols, figsize=(5 * n_cols, 4 * n_rows))
         axes = np.atleast_2d(axes)
         fig.suptitle(title, fontsize=14, fontweight="bold", y=1.01)
 

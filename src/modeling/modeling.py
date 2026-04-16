@@ -25,8 +25,10 @@ class Modeling:
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _scale(df: pd.DataFrame) -> tuple[np.ndarray, StandardScaler, list[str]]:
-        """Drop zero-variance columns, StandardScale, return (X, scaler, cols)."""
+    def _scale(df: pd.DataFrame) -> tuple[np.ndarray,
+                                          StandardScaler, list[str]]:
+        """Drop zero-variance columns, StandardScale,
+        return (X, scaler, cols)."""
         numeric = df.select_dtypes(include="number")
         non_const = numeric.loc[:, numeric.std() > 0]
         scaler = StandardScaler()
