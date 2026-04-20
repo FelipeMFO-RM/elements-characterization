@@ -78,7 +78,7 @@ def _build_new_samples(
     """Build the DataFrame of new samples to classify from config.
 
     Supports two sources (both can be active simultaneously):
-    - ``blends``        — auto-generated convex combinations of existing samples
+    - ``blends`` — auto-generated convex combinations of existing samples
     - ``manual_samples``— user-defined compositions in config.yaml
     """
     frames = []
