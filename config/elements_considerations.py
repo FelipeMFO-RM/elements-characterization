@@ -45,3 +45,25 @@ TIER_MAP: dict[str, list[str]] = {
     "tier2": TIER_2,
     "tier3": TIER_3,
 }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Periodic group classification (conductivity-reduction studies)
+# Source: data/structured/Periodic GroupElement Added.tsv
+# Note: group numbering follows copper-alloy industry convention,
+#       not modern IUPAC group numbers.
+# ──────────────────────────────────────────────────────────────────────────────
+
+PERIODIC_GROUPS: dict[str, list[str]] = {
+    "I":    ["Ag", "Au"],           # noble metals — low impact
+    "II":   ["Zn", "Cd"],
+    "III":  ["Al"],                 # very high factor (500)
+    "IV":   ["Si", "Sn", "Pb"],
+    "V":    ["P", "As", "Sb", "Bi"],  # P has highest factor (3000)
+    "VI":   ["S", "Te"],            # O not measured by SPECTRO Cu-10-F
+    "VIII": ["Fe"],                 # factor 140
+}
+
+# Elements present in the compositions but absent from the reduction table
+UNCATEGORIZED: list[str] = [
+    "Mn", "Ni", "Mg", "Cr", "Co", "B", "Ti", "Pt", "Be", "Zr",
+]
