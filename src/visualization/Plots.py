@@ -207,6 +207,70 @@ class Plots:
         plt.show()
 
     @staticmethod
+    def plot_pca_variance(
+        analyses: dict[str, dict],
+        title: str = "PCA Variance Analysis",
+        output_path: str | None = None,
+    ) -> None:
+        """Scree + cumulative variance chart for one or more feature sets.
+
+        Each key in *analyses* produces one subplot.  Bars show the
+        individual explained variance per PC; the red line shows the
+        cumulative total.  Cumulative values are annotated at each point
+        for easy reading of "how many PCs reach 90 %?".
+
+        Parameters
+        ----------
+        analyses:
+            ``{label: result_dict}`` where each ``result_dict`` is the
+            output of ``Modeling.pca_variance_analysis``.
+        title:
+            Figure super-title.
+        output_path:
+            If provided, save the figure to this path.
+        """
+        n = len(analyses)
+        fig, axes = plt.subplots(1, n, figsize=(5 * n, 4), sharey=False)
+        if n == 1:
+            axes = [axes]
+        fig.suptitle(title, fontweight="bold", y=1.02)
+
+        for ax, (label, res) in zip(axes, analyses.items()):
+            pcs = res["n_components"]
+            var = [v * 100 for v in res["variance_per_pc"]]
+            cum = [c * 100 for c in res["cumulative_variance"]]
+
+            ax.bar(pcs, var, color="steelblue", alpha=0.75,
+                   label="Individual PC")
+            ax.plot(pcs, cum, "o-", color="tomato", linewidth=2,
+                    markersize=5, label="Cumulative")
+
+            for n_pc, c in zip(pcs, cum):
+                ax.annotate(
+                    f"{c:.0f}%",
+                    (n_pc, c),
+                    textcoords="offset points",
+                    xytext=(0, 7),
+                    fontsize=8,
+                    ha="center",
+                    color="tomato",
+                )
+
+            n_feat = res["n_features"]
+            ax.set_title(f"{label}\n({n_feat} features after scaling)",
+                         fontsize=9)
+            ax.set_xlabel("Principal Component")
+            ax.set_ylabel("Explained variance (%)")
+            ax.set_ylim(0, 115)
+            ax.set_xticks(pcs)
+            ax.legend(fontsize=8)
+
+        plt.tight_layout()
+        if output_path:
+            plt.savefig(output_path, dpi=150, bbox_inches="tight")
+        plt.show()
+
+    @staticmethod
     def plot_silhouette_heatmap(
         summary: pd.DataFrame,
         title: str,

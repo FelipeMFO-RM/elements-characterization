@@ -182,6 +182,94 @@ class Modeling:
         return summary, results
 
     # ------------------------------------------------------------------
+    # PCA variance analysis
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def pca_variance_analysis(
+        df: pd.DataFrame,
+        max_pcs: int = 5,
+        seed: int = 42,
+    ) -> dict:
+        """Fit PCA and return explained-variance data for 1..max_pcs components.
+
+        Useful for comparing how many principal components are needed to
+        capture a given fraction of variance across different feature sets.
+
+        Parameters
+        ----------
+        df:
+            Feature matrix — scaled internally via ``_scale``.
+        max_pcs:
+            Maximum number of principal components to evaluate.
+            Automatically clamped to ``min(n_samples - 1, n_features)``.
+        seed:
+            PCA random state.
+
+        Returns
+        -------
+        dict with keys:
+            ``n_components``          — list [1, 2, ..., n]
+            ``variance_per_pc``       — explained variance ratio per PC
+            ``cumulative_variance``   — cumulative explained variance ratio
+            ``n_features``            — number of features after scaling
+        """
+        from sklearn.decomposition import PCA
+        X, _, _ = Modeling._scale(df)
+        n = min(max_pcs, X.shape[1], X.shape[0] - 1)
+        pca = PCA(n_components=n, random_state=seed)
+        pca.fit(X)
+        var = list(pca.explained_variance_ratio_)
+        return {
+            "n_components":        list(range(1, n + 1)),
+            "variance_per_pc":     var,
+            "cumulative_variance": list(np.cumsum(var)),
+            "n_features":          X.shape[1],
+        }
+
+    # ------------------------------------------------------------------
+    # Attach cluster labels to a DataFrame
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def attach_labels(
+        df: pd.DataFrame,
+        results: dict,
+        ks: tuple[int, ...] | None = None,
+    ) -> pd.DataFrame:
+        """Return *df* with cluster label columns appended.
+
+        One column per (algorithm, K) combination, named
+        ``{algo_slug}_k{k}`` (e.g. ``KMeans_k2``, ``KMeanspp_k3``).
+
+        Parameters
+        ----------
+        df:
+            The feature DataFrame whose index aligns with the labels
+            stored in *results* (i.e. the same DataFrame passed to
+            ``run_all``).
+        results:
+            The ``results`` dict returned by ``run_all``.
+        ks:
+            Subset of K values to attach.  Defaults to all Ks present
+            in *results*.
+
+        Returns
+        -------
+        pd.DataFrame
+            Copy of *df* with label columns added; original columns
+            are untouched.
+        """
+        out = df.copy()
+        for algo, algo_results in results.items():
+            slug = algo.replace("+", "p").replace(" ", "_")
+            for k, res in algo_results.items():
+                if ks is not None and k not in ks:
+                    continue
+                out[f"{slug}_k{k}"] = res["labels"]
+        return out
+
+    # ------------------------------------------------------------------
     # Predict new samples
     # ------------------------------------------------------------------
 
