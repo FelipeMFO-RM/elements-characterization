@@ -198,7 +198,7 @@ class FeatureEngineering:
         Parameters
         ----------
         tsv_path:
-            Path to ``Periodic GroupElement Added.tsv``.
+            Path to ``periodic_group_elements_factor.tsv``.
 
         Returns
         -------

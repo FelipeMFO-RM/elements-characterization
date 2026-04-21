@@ -48,7 +48,7 @@ TIER_MAP: dict[str, list[str]] = {
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Periodic group classification (conductivity-reduction studies)
-# Source: data/structured/Periodic GroupElement Added.tsv
+# Source: data/structured/periodic_group_elements_factor.tsv
 # Note: group numbering follows copper-alloy industry convention,
 #       not modern IUPAC group numbers.
 # ──────────────────────────────────────────────────────────────────────────────
